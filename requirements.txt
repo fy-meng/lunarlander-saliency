@@ -1,0 +1,7 @@
+matplotlib==2.2.2
+numpy==1.14.4
+pandas==0.23.0
+gym==0.10.8
+Keras==2.2.4
+tensorflow==1.11.0
+Box2D
