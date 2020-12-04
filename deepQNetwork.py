@@ -1,7 +1,7 @@
-'''
+"""
 File name: deepQNetwork.py
     Deep Q-Network class implementation (Implements a DQN [1])
-           
+
 Author: Vasileios Saveris
 enail: vsaveris@gmail.com
 
@@ -13,7 +13,7 @@ References:
     [1] arXiv:1312.5602 [cs.LG]
 
 Python Version: 3.6
-'''
+"""
 
 import memory as mem
 import numpy as np
@@ -85,52 +85,52 @@ class DeepQNetwork(object):
 
     def __init__(self, emulator, dnn, states_size, actions_number, memory_size, minibatch_size, gamma, epsilon,
                  epsilon_decay_factor, seed=None, verbose=C_VERBOSE_NONE):
-        '''
-        Summary: 
+        """
+        Summary:
             Class constructor.
-    
-        Args: 
+
+        Args:
             dnn: DeepNN object
                 The Deep Neural Network to be used
-                
+
             states_size: int
                 The number of elements in the environment's state.
-                
+
             actions_number: int
                 The number of possible actions.
-                
+
             memory_size: int
                 The size of the replay memory feature which will be used by the DQN.
-                
+
             minibatch_size: int
-                The minibatch size which will be retrieved randomly from the memory in each 
+                The minibatch size which will be retrieved randomly from the memory in each
                 iteration.
-                
+
             gamma: float
                 The discount factor to be used in the equation (3) of [1].
-                
+
             epsilon: float
                 The probability to select a random action (See [1] Algorithm 1).
-            
+
             epsilon_decay_factor: float
                 The decay factor of epsilon parameter, for each iteration step.
-                
+
             seed: int or None
                 Seed to be used with the numpy random generator.
-            
+
             verbose: int
                 Verbose level (0: None, 1: INFO, 2: DEBUG, see CONSTANTS section)
-                
+
         Raises:
             -
-        
+
         Returns:
             -
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         self.__verbose = verbose
 
@@ -157,25 +157,25 @@ class DeepQNetwork(object):
         self.__epsilon_decay_factor = epsilon_decay_factor
 
     def decideAction(self, state):
-        '''
-        Summary: 
+        """
+        Summary:
             Decides the action based on the given state.
-    
-        Args: 
+
+        Args:
             state: state object
                 The state from which an action should be decided.
-                
+
         Raises:
             -
-        
+
         Returns:
             action: int
                 The selected action (random or optimal).
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         # With probability epsilon select a random action
         if np.random.random() < self.__epsilon:
@@ -196,24 +196,24 @@ class DeepQNetwork(object):
         return self.__dnn.predict(state)
 
     def storeTransition(self, experience):
-        '''
-        Summary: 
+        """
+        Summary:
             Adds an experience tuple in the memory.
-    
-        Args: 
+
+        Args:
             experience: list
                 An experience tuple [s, a, r, s']
 
         Raises:
             -
-            
+
         Returns:
             -
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         if self.__verbose > C_VERBOSE_INFO:
             print('DQN Store Transition (experience = ', experience, ')', sep='')
@@ -221,23 +221,23 @@ class DeepQNetwork(object):
         self.__memory.add(experience)
 
     def sampleRandomMinibatch(self):
-        '''
-        Summary: 
+        """
+        Summary:
             Samples a random minibatch from the memory and trains with it the DNN.
-    
-        Args: 
+
+        Args:
             -
-                
+
         Raises:
             -
-            
+
         Returns:
             -
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         minibatch = self.__memory.get(self.__minibatch_size)
 

@@ -1,7 +1,7 @@
-'''
+"""
 File name: deepNeuralNetwork.py
     Deep Neural Network Class implementation with Keras and Tensorflow [1].
-           
+
 Author: Vasileios Saveris
 enail: vsaveris@gmail.com
 
@@ -13,12 +13,7 @@ References:
    [1] https://keras.io
 
 Python Version: 3.6
-'''
-
-# Disable TensorFlow Information printouts
-import warnings
-
-warnings.filterwarnings('ignore')
+"""
 
 # Keras modules
 from keras.models import Sequential
@@ -27,6 +22,11 @@ import keras.optimizers as opt
 from keras.models import load_model
 
 import deepQNetwork
+
+# Disable TensorFlow Information printouts
+import warnings
+
+warnings.filterwarnings('ignore')
 
 '''
 Constants
@@ -37,14 +37,14 @@ C_VERBOSE_DEBUG = 2  # Debugging printing level (all printouts)
 
 
 class DeepNeuralNetwork(object):
-    '''
+    """
     Summary:
         Deep Neural Network Class implementation with Keras and Tensorflow.
 
     Private Attributes:
         __verbose: int
             Verbose level (0: None, 1: INFO, 2: DEBUG, see CONSTANTS section)
-            
+
         __model: Keras model
             The Deep Neural Network model created using keras.
 
@@ -52,69 +52,69 @@ class DeepNeuralNetwork(object):
         -
 
     Private Methods:
-        __init__(inputs, file_name, outputs, hidden_layers, hidden_layers_size, optimizer_learning_rate, 
+        __init__(inputs, file_name, outputs, hidden_layers, hidden_layers_size, optimizer_learning_rate,
                  seed, verbose): returns none
             Class constructor. Creates a Deep Neural Network using Keras (frontend) and TensorFlow
             (backend). In case file_name is present, then the model is loaded from the given file.
-        
+
     Public Methods:
         train(X instances data, Y instances labels): returns none
             Trains the Deep NN model.
-            
+
         predict(X instances data): returns a numpy array of labels
             Predicts the label value for the input instances.
-            
+
         saveModel(file_name):
             Saves the model.
-    
-    '''
+
+    """
 
     def __init__(self, file_name=None, inputs=None, outputs=None, hidden_layers=None, hidden_layers_size=None,
                  optimizer_learning_rate=0.001, seed=None, verbose=C_VERBOSE_NONE):
-        '''
-        Summary: 
+        """
+        Summary:
             Class constructor. Creates a Deep Neural Network using Keras (frontend) and TensorFlow
             (backend). In case file_name is present, then the model is loaded from the given file.
-    
+
         Args:
             file_name: string
-                The model to be loaded. Rest parameters (except verbose) are ignored if the file_name is not 
+                The model to be loaded. Rest parameters (except verbose) are ignored if the file_name is not
                 None.
-                
+
             inputs: int
                 The number of inputs of the Deep Neural Network.
-                
+
             outputs: int
                 The number of outputs of the Deep Neural Network.
-                
+
             hidden_layers: int
                 The number of hidden layers of the Deep Neural Network. Not including the first
                 and last layer.
-            
+
             hidden_layers_size: int
                 The size of each hidden layer of the Neural Network.
-                
+
             optimizer_learning_rate: float (Default 0.001)
                 The Adam optimizer learning rate.
-                
+
             seed: int
-                Optional Seed to be used with the Keras and Tensor Flow environments, for results 
+                Optional Seed to be used with the Keras and Tensor Flow environments, for results
                 reproducability.
-                         
+
             verbose: int
                 Verbose level (0: None, 1: INFO, 2: DEBUG, see CONSTANTS section)
-                
+
         Raises:
             -
-        
+
         Returns:
             -
-            
+
         notes:
             Considerations for a next version:
                 Pass activation function and optimizer as input parameters to the constructor.
-     
-        '''
+
+        """
 
         self.__verbose = verbose
 
@@ -153,24 +153,24 @@ class DeepNeuralNetwork(object):
         self.__model.compile(loss='mse', optimizer=opt.Adam(lr=optimizer_learning_rate))
 
     def __applySeed(self, seed):
-        '''
-        Summary: 
+        """
+        Summary:
             Applies the given seed to the Keras with Tensor Flow backend, environment.
-    
+
         Args:
             seed: int
                 Seed value.
 
         Raises:
             -
-        
+
         Returns:
             -
-            
+
         notes:
-            see: 
-            https://keras.io/getting-started/faq/#how-can-i-obtain-reproducible-results-using-keras-during-development 
-        '''
+            see:
+            https://keras.io/getting-started/faq/#how-can-i-obtain-reproducible-results-using-keras-during-development
+        """
 
         if self.__verbose > C_VERBOSE_INFO:
             print('Apply Seed to the \'Keras\' with the \'Tensor Flow\' Backend environment (seed = ', seed, ')',
@@ -186,27 +186,27 @@ class DeepNeuralNetwork(object):
                                                                              inter_op_parallelism_threads=1)))
 
     def train(self, X, Y):
-        '''
-        Summary: 
+        """
+        Summary:
             Trains the model with the input instance(s).
-    
+
         Args:
             X: numpy array
                 The training instances (data).
-              
+
             Y: numpy array
                 The training labels.
-                
+
         Raises:
             -
-        
+
         Returns:
             -
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         if self.__verbose > C_VERBOSE_INFO:
             print('Deep Neural Network Train (training_instances = ', X.shape[0], ')', sep='')
@@ -219,25 +219,25 @@ class DeepNeuralNetwork(object):
                          initial_epoch=0, steps_per_epoch=None, validation_steps=None)
 
     def predict(self, X):
-        '''
-        Summary: 
+        """
+        Summary:
             Predicts the label value for the input instance(s).
-    
+
         Args:
             X: numpy array
                 The instance(s) (data) for which a label prediction is requested.
-                
+
         Raises:
             -
-        
+
         Returns:
             Y: numpy array
                 The prediction(s).
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         if self.__verbose > C_VERBOSE_INFO:
             print('Deep Neural Network Predict (prediction_instances = ', X.shape, ')', sep='')
@@ -256,24 +256,24 @@ class DeepNeuralNetwork(object):
         return self.__model.qValues(X)
 
     def saveModel(self, file_name):
-        '''
-        Summary: 
+        """
+        Summary:
             Saves the model.
-    
+
         Args:
             file_name: string
                 The file in which the model should be saved.
-                
+
         Raises:
             -
-        
+
         Returns:
             -
-            
+
         notes:
             -
-     
-        '''
+
+        """
 
         if self.__verbose > C_VERBOSE_INFO:
             print('Deep Neural Network Model Saved (file_name = ', file_name, ')', sep='')

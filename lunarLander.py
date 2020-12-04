@@ -52,38 +52,39 @@ C_VERBOSE_NONE = 0  # Printing is disabled
 C_VERBOSE_INFO = 1  # Only information printouts (constructor)
 C_VERBOSE_DEBUG = 2  # Debugging printing level (all printouts)
 
-num_state = 8
-num_saliency_tests = 100
-saliency_perturbation = 0.1
-state_labels = [
+NUM_STATE = 8
+NUM_ACTION = 4
+NUM_SALIENCY_TESTS = 100
+SALIENCY_PERTURBATION = 0.1
+STATE_LABELS = [
     'x_pos', 'y_pos', 'x_vel', 'y_vel',
     'angle', 'ang_vel', 'left_leg', 'right_leg'
 ]
 
 
 def executionTimeToString(execution_time, digits_precision=3):
-    '''
-    Summary: 
+    """
+    Summary:
         Creates a printable string regarding the execution time
-    
+
     Args:
         execution_time: float
             Execution time in seconds
-            
+
         digits_precision: integer
             Defines the precision in the decimal digits
-    
+
     Raises:
         -
-    
+
     Returns:
         time_string: string
             Printable time string
             i.e. 1 hour 2 minutes 12 seconds 113 milliseconds (3732.113 seconds)
-        
+
     notes:
         -
-    '''
+    """
 
     # Three decimal digits accuracy
     execution_time = round(execution_time, digits_precision)
@@ -119,26 +120,26 @@ def executionTimeToString(execution_time, digits_precision=3):
 
 
 def applySeed(seed, verbose):
-    '''
-    Summary: 
+    """
+    Summary:
         Applies the given seed to the numpy and core python random functions.
-    
+
     Args:
         seed: int
             Seed value.
-                
+
         verbose: int
             Verbose level (0: None, 1: INFO, 2: DEBUG)
-                
+
     Raises:
         -
-        
+
     Returns:
         -
-            
+
     notes:
         -
-    '''
+    """
 
     if verbose != C_VERBOSE_NONE:
         print('Apply Random Seed to the execution environment (seed = ', seed, ')', sep='')
@@ -152,40 +153,47 @@ def applySeed(seed, verbose):
     random.seed(seed)
 
 
-def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_suffix='', verbose=C_VERBOSE_NONE):
-    '''
-    Summary: 
+def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_suffix='', verbose=C_VERBOSE_NONE,
+          store_history=False, compute_saliency=False):
+    """
+    Summary:
         Evaluate the trained DQN for a number of trials (number_of_trials).
-    
+
     Args:
         model_file_name: string
             The saved trained DQN (Keras DNN h5 file).
-            
-        scenario: string 
+
+        scenario: string
             The OpenAI gym scenario to be loaded by the Emulator.
-            
+
         number_of_trials: int
             How many trials to execute.
-        
+
         rendering: boolean
             If True, OpenAI gym environment rendering is enabled.
 
         graphs_suffix: string
-            A suffix added in the graphs file names. To be used in case of multiple trials.            
-                
+            A suffix added in the graphs file names. To be used in case of multiple trials.
+
         verbose: int
             Verbose level (0: None, 1: INFO, 2: DEBUG)
-                
+
+        store_history: bool
+            Store history data or not.
+
+        compute_saliency: bool
+            Computes saliency or not.
+
     Raises:
         -
 
     Returns:
         trials_average_reward: float
             The average reward for the trial-episode (100 episodes)
-            
+
     notes:
         -
-    '''
+    """
 
     if verbose > C_VERBOSE_NONE:
         print('\nEvaluate the trained DQN in ', str(number_of_trials), ' trials (episodes).', sep='')
@@ -206,6 +214,14 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
     # Start measuring Trials time
     start_time = time.time()
 
+    trial_history = []
+    state_history = []
+    action_history = []
+    reward_history = []
+    next_state_history = []
+    q_values_history = []
+    saliency_history = []
+
     # Trials
     # used as baseline for perturbation
     # for each feature, apply a random noise of 0.2 * (max(feature) - min(feature))
@@ -215,53 +231,64 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
 
         current_state = emulator.start()
 
-        state_history = []
-        action_history = []
-        saliency_history = []
-
         while emulator.emulator_started:
             q_values = dnn.predict(current_state)
             action = np.argmax(q_values)
 
-            state_history.append(current_state)
-            action_history.append(action)
+            if compute_saliency:
+                # compute saliency
+                saliency = np.zeros(NUM_STATE)
+                for _ in range(NUM_SALIENCY_TESTS):
+                    for j in range(NUM_STATE):
+                        # perturb state
+                        perturbed_state = np.array(current_state)
+                        if j < 6:  # numerical states
+                            perturbed_state[j] = SALIENCY_PERTURBATION * np.random.rand() \
+                                                 * (state_max[j] - state_min[j]) + state_min[j]
+                        else:  # boolean states
+                            perturbed_state = current_state.copy()
+                            perturbed_state[j] = 1 - perturbed_state[j]
+                        q_values_preturbed = dnn.predict(perturbed_state)
 
-            # compute saliency
-            saliency_history.append(np.zeros(num_state))
-            for _ in range(num_saliency_tests):
-                for j in range(num_state):
-                    # perturb state
-                    perturbed_state = np.array(current_state)
-                    if j < 6:  # numerical states
-                        perturbed_state[j] = saliency_perturbation * np.random.rand() \
-                                             * (state_max[j] - state_min[j]) + state_min[j]
-                    else:  # boolean states
-                        perturbed_state = current_state.copy()
-                        perturbed_state[j] = 1 - perturbed_state[j]
-                    q_values_preturbed = dnn.predict(perturbed_state)
+                        max_q = np.max(q_values)
+                        q_values /= max_q
+                        q_values_preturbed /= max_q
 
-                    max_q = np.max(q_values)
-                    q_values /= max_q
-                    q_values_preturbed /= max_q
-
-                    q_value_dict = {a: q_values[0, a].astype(np.float64) for a in range(4)}
-                    q_value_preturbed_dict = {a: q_values_preturbed[0, a].astype(np.float64) for a in range(4)}
-                    saliency = sarfa_saliency.computeSaliencyUsingSarfa(action,
-                                                                        q_value_dict,
-                                                                        q_value_preturbed_dict)
-                    saliency_history[-1][j] += saliency[0]
-            saliency_history[-1] /= num_saliency_tests
+                        q_value_dict = {a: q_values[0, a].astype(np.float64) for a in range(4)}
+                        q_value_preturbed_dict = {a: q_values_preturbed[0, a].astype(np.float64) for a in range(4)}
+                        saliency[j] = sarfa_saliency.computeSaliencyUsingSarfa(action,
+                                                                               q_value_dict,
+                                                                               q_value_preturbed_dict)[0]
+                saliency /= NUM_SALIENCY_TESTS
 
             # Experience [s, a, r, s']
             experience = emulator.applyAction(action)
+
+            # save data
+            if store_history:
+                trial_history.append(i)
+                state_history.append(current_state)
+                action_history.append(action)
+                reward_history.append(experience[2])
+                next_state_history.append(experience[3])
+                q_values_history.append(q_values)
+                if compute_saliency:
+                    saliency_history.append(saliency)
+
             current_state = experience[3]
 
-        saliency_history = np.array(saliency_history)
-
-        # save data
-        state_history = np.array(state_history)
-        action_history = np.array(action_history)
-        np.savez('output/history.npz', states=state_history, actions=action_history, saliency=saliency_history)
+    if store_history:
+        history_dict = {
+            'trial': trial_history,
+            'state': state_history,
+            'action': action_history,
+            'reward': reward_history,
+            'next_state': next_state_history,
+            'q_values': q_values_history
+        }
+        if compute_saliency:
+            history_dict['saliency'] = saliency_history
+        np.savez('output/history.npz', **history_dict)
 
     if verbose > C_VERBOSE_NONE:
         print('\nDQN ', str(number_of_trials), ' trials average = ', emulator.execution_statistics.values[-1, 3],
@@ -375,7 +402,8 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
                                               optimizer_learning_rate=optimizer_learning_rate, seed=seed,
                                               verbose=verbose)
 
-    # Create a DQN object instance (we start always from epsilon = 1.0, we control each value with the epsilon_decay_factor
+    # Create a DQN object instance (we start always from epsilon = 1.0, we control each value with the
+    # epsilon_decay_factor
     dqn = deepQNetwork.DeepQNetwork(emulator=emulator, dnn=dnn, states_size=emulator.state_size,
                                     actions_number=emulator.actions_number,
                                     memory_size=memory_size, minibatch_size=minibatch_size, gamma=gamma, epsilon=1.0,
@@ -481,6 +509,13 @@ if __name__ == '__main__':
     args_parser.add_argument('-e', action='store', required=True, help='execute (train, test)',
                              choices=('train', 'test'))
     args_parser.add_argument('-a', action='store', required=False, help='trained agent file')
+    args_parser.add_argument('-n', action='store', required=False, default=1, help='number of trials during testing')
+    args_parser.add_argument('--rendering', action='store_true', required=False, default=False,
+                             help='rendering during testing')
+    args_parser.add_argument('--store_history', action='store_true', required=False, default=False,
+                             help='store history during testing')
+    args_parser.add_argument('--compute_saliency', action='store_true', required=False, default=False,
+                             help='compute saliency during testing')
 
     args = args_parser.parse_args()
 
@@ -489,6 +524,11 @@ if __name__ == '__main__':
 
     # Verbose level (0: None, 1: INFO, 2: DEBUG) 
     verbose = C_VERBOSE_NONE if args.v is None else int(args.v)
+
+    num_trials = int(args.n)
+    rendering = args.rendering
+    store_history = args.store_history
+    compute_saliency = args.compute_saliency
 
     # Trigger the requested execution type 
     if args.e == 'train':
@@ -507,5 +547,5 @@ if __name__ == '__main__':
         if verbose:
             print('\nTest once the trained DQN agent.')
 
-        trial(model_file_name=args.a, scenario='LunarLander-v2', number_of_trials=1, rendering=False,
-              graphs_suffix='', verbose=verbose)
+        trial(model_file_name=args.a, scenario='LunarLander-v2', number_of_trials=num_trials, rendering=rendering,
+              graphs_suffix='', verbose=verbose, store_history=store_history, compute_saliency=compute_saliency)
