@@ -21,6 +21,7 @@ This will generate `output/history.npz`, in which it contains:
 - `action`: a vector of shape `(T,)` containing actions at each step;
 - `reward`: a vector of shape `(T,)` containing reward at each step;
 - `next_state`: a matrix of shape `(T, 8)` containing the next state at each step;
+- `done`: a matrix of shape `(T,)` containing a boolean representing the simulation ended at this step or not. If `True`, the value in `next_state` is undefined;__
 - `q_values`: a matrix of shape `(T, 4)` containig the Q-values at each step;
 - `saliency`: a matrix of shape `(T, 8)` containing the computed saliency for each feature at each step.
 Note that the `saliency` only exists if the `--compute_saliency` tag is used.

@@ -221,6 +221,7 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
     state_history = []
     action_history = []
     reward_history = []
+    done_history = []
     next_state_history = []
     q_values_history = []
     saliency_history = []
@@ -273,7 +274,12 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
                 state_history.append(current_state)
                 action_history.append(action)
                 reward_history.append(experience[2])
-                next_state_history.append(experience[3])
+                if experience[3] is not None:
+                    next_state_history.append(experience[3])
+                    done_history.append(False)
+                else:
+                    next_state_history.append(current_state)
+                    done_history.append(True)
                 q_values_history.append(q_values)
                 if compute_saliency:
                     saliency_history.append(saliency)
@@ -287,6 +293,7 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
             'action': action_history,
             'reward': reward_history,
             'next_state': next_state_history,
+            'done': done_history,
             'q_values': q_values_history
         }
         if compute_saliency:
@@ -427,6 +434,7 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
     action_history = []
     reward_history = []
     next_state_history = []
+    done_history = []
     q_values_history = []
 
     if converge_criteria is not None:
@@ -453,8 +461,13 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
                 state_history.append(current_state)
                 action_history.append(action)
                 reward_history.append(experience[2])
-                next_state_history.append(experience[3])
-                q_values_history.append(q_values)
+                if experience[3] is not None:
+                    next_state_history.append(experience[3])
+                    done_history.append(False)
+                else:
+                    next_state_history.append(current_state)
+                    done_history.append(True)
+                q_values_history.append(q_values.squeeze())
 
             dqn.storeTransition(experience)
             dqn.sampleRandomMinibatch()
@@ -486,6 +499,7 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
             'action': action_history,
             'reward': reward_history,
             'next_state': next_state_history,
+            'done': done_history,
             'q_values': q_values_history
         }
         np.savez(history_save_path, **history_dict)
