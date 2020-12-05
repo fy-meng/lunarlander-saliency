@@ -578,7 +578,7 @@ if __name__ == '__main__':
         train(scenario='LunarLander-v2', average_reward_episodes=100, rendering=False, hidden_layers=1,
               hidden_layers_size=64, memory_size=None, minibatch_size=64, optimizer_learning_rate=0.001, gamma=0.99,
               epsilon_decay_factor=0.99995, maximum_episodes=10000, model_file_name='DQN_Trained.h5',
-              converge_criteria=150, graphs_suffix='_Conv_150', seed=seed, verbose=verbose)
+              converge_criteria=150, graphs_suffix='_Conv_150', seed=seed, verbose=verbose, store_history=store_history)
 
     else:
         if verbose:
