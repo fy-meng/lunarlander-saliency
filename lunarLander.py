@@ -38,6 +38,7 @@ import time
 
 # Other classes
 import matplotlib.pyplot as plt
+import numpy as np
 
 import deepNeuralNetwork
 import deepQNetwork
@@ -154,7 +155,7 @@ def applySeed(seed, verbose):
 
 
 def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_suffix='', verbose=C_VERBOSE_NONE,
-          store_history=False, compute_saliency=False):
+          store_history=False, compute_saliency=False, history_save_path='./output/history_test.npz'):
     """
     Summary:
         Evaluate the trained DQN for a number of trials (number_of_trials).
@@ -184,6 +185,9 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
         compute_saliency: bool
             Computes saliency or not.
 
+        history_save_path: str
+            Where to store the history file.
+
     Raises:
         -
 
@@ -201,10 +205,7 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
               number_of_trials,
               ', rendering = ', rendering, ', graphs_suffix = ', graphs_suffix, sep='')
 
-    # Import Numpy for the trial
-    import numpy as np
-
-    # Create a Emulator object instance (without a seed)
+        # Create a Emulator object instance (without a seed)
     emulator = em.Emulator(scenario=scenario, average_reward_episodes=number_of_trials, statistics=True,
                            rendering=rendering, seed=42, verbose=verbose)
 
@@ -288,7 +289,7 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
         }
         if compute_saliency:
             history_dict['saliency'] = saliency_history
-        np.savez('output/history.npz', **history_dict)
+        np.savez(history_save_path, **history_dict)
 
     if verbose > C_VERBOSE_NONE:
         print('\nDQN ', str(number_of_trials), ' trials average = ', emulator.execution_statistics.values[-1, 3],
@@ -300,8 +301,8 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
 
 def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_layers_size, memory_size, minibatch_size,
           optimizer_learning_rate, gamma, epsilon_decay_factor, maximum_episodes, model_file_name,
-          converge_criteria=None,
-          graphs_suffix='', seed=None, verbose=C_VERBOSE_NONE):
+          converge_criteria=None, graphs_suffix='', seed=None, verbose=C_VERBOSE_NONE, store_history=False,
+          history_save_path='./output/history_train.npz'):
     """
     Summary:
         Trains a DQN model for solving the given OpenAI gym scenario.
@@ -359,6 +360,12 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
         verbose: int
             Verbose level (0: None, 1: INFO, 2: DEBUG)
 
+        store_history: bool
+            Store history or not.
+
+        history_save_path: str
+            Where to store the history file.
+
     Raises:
         -
 
@@ -413,6 +420,13 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
     # Start measuring training time
     start_time = time.time()
 
+    trial_history = []
+    state_history = []
+    action_history = []
+    reward_history = []
+    next_state_history = []
+    q_values_history = []
+
     if converge_criteria is not None:
         # Holds how many concecutive episodes average reward is > 200
         convergence_counter = 0
@@ -425,10 +439,20 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
 
         # See Algorithm 1 in [1]
         while emulator.emulator_started:
-            action = dqn.decideAction(current_state)
+            q_values = dnn.predict(current_state)
+            action = np.argmax(q_values)
 
             # Experience [s, a, r, s']
             experience = emulator.applyAction(action)
+
+            # save data
+            if store_history:
+                trial_history.append(i)
+                state_history.append(current_state)
+                action_history.append(action)
+                reward_history.append(experience[2])
+                next_state_history.append(experience[3])
+                q_values_history.append(q_values)
 
             dqn.storeTransition(experience)
             dqn.sampleRandomMinibatch()
@@ -452,6 +476,17 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
             if convergence_counter >= converge_criteria:
                 convergence_episode = i
                 break
+
+    if store_history:
+        history_dict = {
+            'trial': trial_history,
+            'state': state_history,
+            'action': action_history,
+            'reward': reward_history,
+            'next_state': next_state_history,
+            'q_values': q_values_history
+        }
+        np.savez(history_save_path, **history_dict)
 
     if converge_criteria is not None:
         convergence_time = time.time() - start_time
