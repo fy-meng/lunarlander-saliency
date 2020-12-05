@@ -46,6 +46,8 @@ import deepQNetwork
 import emulator as em
 import sarfa_saliency
 
+plt.switch_backend('agg')
+
 '''
 Constants
 '''
