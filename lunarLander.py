@@ -34,11 +34,13 @@ Python Version: 3.6
 """
 
 import argparse
+import os
 import time
 
 # Other classes
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 import deepNeuralNetwork
 import deepQNetwork
@@ -157,7 +159,7 @@ def applySeed(seed, verbose):
 
 
 def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_suffix='', verbose=C_VERBOSE_NONE,
-          store_history=False, compute_saliency=False, history_save_path='./output/history_test.npz'):
+          store_history=False, compute_saliency=False, history_save_path='./output/history_test.pkl'):
     """
     Summary:
         Evaluate the trained DQN for a number of trials (number_of_trials).
@@ -217,14 +219,17 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
     # Start measuring Trials time
     start_time = time.time()
 
-    trial_history = []
-    state_history = []
-    action_history = []
-    reward_history = []
-    done_history = []
-    next_state_history = []
-    q_values_history = []
-    saliency_history = []
+    history = {
+        'trial': [],
+        'state': [],
+        'action': [],
+        'reward': [],
+        'next_state': [],
+        'done': [],
+        'q_values': []
+    }
+    if compute_saliency:
+        history['saliency'] = []
 
     # Trials
     # used as baseline for perturbation
@@ -270,35 +275,29 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
 
             # save data
             if store_history:
-                trial_history.append(i)
-                state_history.append(current_state)
-                action_history.append(action)
-                reward_history.append(experience[2])
+                history['trial'].append(i)
+                history['state'].append(current_state)
+                history['action'].append(action)
+                history['reward'].append(experience[2])
                 if experience[3] is not None:
-                    next_state_history.append(experience[3])
-                    done_history.append(False)
+                    history['next_state'].append(experience[3])
+                    history['done'].append(False)
                 else:
-                    next_state_history.append(current_state)
-                    done_history.append(True)
-                q_values_history.append(q_values)
+                    history['next_state'].append(current_state)
+                    history['done'].append(True)
+                history['q_values'].append(q_values)
                 if compute_saliency:
-                    saliency_history.append(saliency)
+                    history['saliency'].append(saliency)
 
             current_state = experience[3]
 
     if store_history:
-        history_dict = {
-            'trial': trial_history,
-            'state': state_history,
-            'action': action_history,
-            'reward': reward_history,
-            'next_state': next_state_history,
-            'done': done_history,
-            'q_values': q_values_history
-        }
-        if compute_saliency:
-            history_dict['saliency'] = saliency_history
-        np.savez(history_save_path, **history_dict)
+        for k in history.keys():
+            history[k] = np.array(history[k])
+        history_save_dir = os.path.split(history_save_path)[0]
+        if not os.path.exists(history_save_dir):
+            os.makedirs(history_save_dir)
+        pd.to_pickle(history, history_save_path)
 
     if verbose > C_VERBOSE_NONE:
         print('\nDQN ', str(number_of_trials), ' trials average = ', emulator.execution_statistics.values[-1, 3],
@@ -311,7 +310,7 @@ def trial(model_file_name, scenario, number_of_trials, rendering=False, graphs_s
 def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_layers_size, memory_size, minibatch_size,
           optimizer_learning_rate, gamma, epsilon_decay_factor, maximum_episodes, model_file_name,
           converge_criteria=None, graphs_suffix='', seed=None, verbose=C_VERBOSE_NONE, store_history=False,
-          history_save_path='./output/history_train.npz'):
+          history_save_path='./output/history_train.pkl'):
     """
     Summary:
         Trains a DQN model for solving the given OpenAI gym scenario.
@@ -429,13 +428,15 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
     # Start measuring training time
     start_time = time.time()
 
-    trial_history = []
-    state_history = []
-    action_history = []
-    reward_history = []
-    next_state_history = []
-    done_history = []
-    q_values_history = []
+    history = {
+        'trial': [],
+        'state': [],
+        'action': [],
+        'reward': [],
+        'next_state': [],
+        'done': [],
+        'q_values': []
+    }
 
     if converge_criteria is not None:
         # Holds how many concecutive episodes average reward is > 200
@@ -457,17 +458,17 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
 
             # save data
             if store_history:
-                trial_history.append(i)
-                state_history.append(current_state)
-                action_history.append(action)
-                reward_history.append(experience[2])
+                history['trial'].append(i)
+                history['state'].append(current_state)
+                history['action'].append(action)
+                history['reward'].append(experience[2])
                 if experience[3] is not None:
-                    next_state_history.append(experience[3])
-                    done_history.append(False)
+                    history['next_state'].append(experience[3])
+                    history['done'].append(False)
                 else:
-                    next_state_history.append(current_state)
-                    done_history.append(True)
-                q_values_history.append(q_values.squeeze())
+                    history['next_state'].append(current_state)
+                    history['done'].append(True)
+                history['q_values'].append(q_values)
 
             dqn.storeTransition(experience)
             dqn.sampleRandomMinibatch()
@@ -493,16 +494,12 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
                 break
 
     if store_history:
-        history_dict = {
-            'trial': trial_history,
-            'state': state_history,
-            'action': action_history,
-            'reward': reward_history,
-            'next_state': next_state_history,
-            'done': done_history,
-            'q_values': q_values_history
-        }
-        np.savez(history_save_path, **history_dict)
+        for k in history.keys():
+            history[k] = np.array(history[k])
+        history_save_dir = os.path.split(history_save_path)[0]
+        if not os.path.exists(history_save_dir):
+            os.makedirs(history_save_dir)
+        pd.to_pickle(history, history_save_path)
 
     if converge_criteria is not None:
         convergence_time = time.time() - start_time
@@ -547,8 +544,7 @@ def train(scenario, average_reward_episodes, rendering, hidden_layers, hidden_la
         return convergence_episode
 
 
-if __name__ == '__main__':
-
+def main():
     # Parse input arguments
     description_message = 'Lunar Lander with DQN'
 
@@ -573,7 +569,7 @@ if __name__ == '__main__':
     if args.e == 'test' and args.a is None:
         args_parser.error('When executing \'test\', the trained agent file (-a) is required.')
 
-    # Verbose level (0: None, 1: INFO, 2: DEBUG) 
+    # Verbose level (0: None, 1: INFO, 2: DEBUG)
     verbose = C_VERBOSE_NONE if args.v is None else int(args.v)
 
     num_trials = int(args.n)
@@ -581,7 +577,7 @@ if __name__ == '__main__':
     store_history = args.store_history
     compute_saliency = args.compute_saliency
 
-    # Trigger the requested execution type 
+    # Trigger the requested execution type
     if args.e == 'train':
         if verbose:
             print('\nTrain a DQN using seed = 1 and default convergence criteria.')
@@ -600,3 +596,7 @@ if __name__ == '__main__':
 
         trial(model_file_name=args.a, scenario='LunarLander-v2', number_of_trials=num_trials, rendering=rendering,
               graphs_suffix='', verbose=verbose, store_history=store_history, compute_saliency=compute_saliency)
+
+
+if __name__ == '__main__':
+    main()
