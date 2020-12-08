@@ -13,7 +13,7 @@ lunarLander.py [-h] [-v {0,1,2}] -e {train,test} [-a A] [-n N]
 
 For example, to run 10 trials and store history, including saliency:
 ```bash
-python lunarLander.py -e test -a ./trained_model/DQN_Trained.h5 -n 10 --save_history --compute_saliency
+python lunarLander.py -e test -a ./trained_model/DQN_Trained.h5 -n 10 --store_history --compute_saliency
 ```
 This will generate `output/history.npz`, in which it contains:
 - `trial`: a vector of shape `(T,)` containing the trial number for each data point, where T is the total number of steps;
