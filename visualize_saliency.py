@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+import pandas as pd
 
 state_labels = [
     'x_pos', 'y_pos', 'x_vel', 'y_vel',
@@ -8,11 +9,12 @@ state_labels = [
 ]
 
 # load data
-file = 'output/history.npz'
-data = np.load(file)
-states: np.ndarray = data['states']
-actions: np.ndarray = data['actions']
-saliency: np.ndarray = data['saliency']
+file = 'output/history_test.pkl'
+df: pd.DataFrame = pd.read_pickle('./output/history_test.pkl')
+idx: np.ndarray = df['trial'] == 0
+states: np.ndarray = df['states'][idx]
+actions: np.ndarray = df['actions'][idx]
+saliency: np.ndarray = df['saliency'][idx]
 
 num_iter = states.shape[0]
 
